@@ -22,6 +22,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { chartsConfig } from "@/configs";
 import { StatisticsChart } from "@/widgets/charts";
 import { use } from "react";
+import obtenerElementosDeHoy from "@/util/PagosHoy";
 
 export function Home() {
   // Estados para almacenar datos diarios y semanales de pesos y dólares
@@ -44,6 +45,7 @@ export function Home() {
   });
   //suma total en pesos del dia de hoy
   const [totalPesosHoy, setTotalPesosHoy] = useState(0);
+  const [totalDolaresHoy, setTotalDolaresHoy] = useState(0);
   //today
   const [hoy, setHoy] = useState(null);
   // Actualiza el monto automáticamente al cambiar la moneda
@@ -127,32 +129,27 @@ export function Home() {
             curr.map((item) => ({
               date: item.createdAt,
               pago: item.amount,
+              moneda: item.currency,
             }))
           );
         }, []);
 
+        console.log(flattenedArray);
+        //dividimos los pagos en dolare y pesos en dos arreglos diferentes
+        const dolaresPagos = flattenedArray.filter((pago) => {
+          return pago.moneda == "dolares";
+        });
+        const pesosPagos = flattenedArray.filter((pago) => {
+          return pago.moneda == "pesos";
+        });
+
         //sacamos solos los pagos que correspondan al dia de hoy
-        function obtenerElementosDeHoy(arrayDeObjetos) {
-          const hoy = new Date();
-          const anioHoy = hoy.getFullYear();
-          const mesHoy = hoy.getMonth() + 1; // Los meses en JavaScript comienzan en 0
-          const diaHoy = hoy.getDate();
-
-          return arrayDeObjetos.filter((objeto) => {
-            const fechaObjeto = new Date(objeto.date);
-            const anioObjeto = fechaObjeto.getFullYear();
-            const mesObjeto = fechaObjeto.getMonth() + 1;
-            const diaObjeto = fechaObjeto.getDate();
-
-            return (
-              anioObjeto === anioHoy &&
-              mesObjeto === mesHoy &&
-              diaObjeto === diaHoy
-            );
-          });
-        }
         //sumamos los pagos solo de hoy
-        const sumPagosHoy = obtenerElementosDeHoy(flattenedArray).reduce(
+        const sumPagosHoyDolares = obtenerElementosDeHoy(dolaresPagos).reduce(
+          (accmonto, monto) => accmonto + monto.pago,
+          0
+        );
+        const sumPagosHoyPesos = obtenerElementosDeHoy(pesosPagos).reduce(
           (accmonto, monto) => accmonto + monto.pago,
           0
         );
@@ -180,7 +177,8 @@ export function Home() {
           return `${diaSemana}`;
         }
         setHoy(obtenerFechaYDia);
-        setTotalPesosHoy(sumPagosHoy);
+        setTotalPesosHoy(sumPagosHoyPesos);
+        setTotalDolaresHoy(sumPagosHoyDolares);
       } catch (error) {
         console.error("Error cargando los pagos:", error);
       }
@@ -274,7 +272,7 @@ export function Home() {
       color: "white",
       title: "Ingreso en pesos",
       description: `Total de ingresos esta semana: ${lastTotalPayment} $`,
-      totalDias: `Total de ingresos hoy ${hoy} : ${totalPesosHoy}`,
+      totalDias: `Total de ingresos hoy ${hoy}: ${totalPesosHoy} $`,
       footer: "Actualizado hace 4 minutos",
       chart: graficoDiaPesos,
     },
@@ -282,6 +280,7 @@ export function Home() {
       color: "white",
       title: "Ingreso en dólares",
       description: `Total de ingresos esta semana: ${lastTotalPaymentDolares} $`,
+      totalDias: `Total de ingresos hoy ${hoy}: ${totalDolaresHoy} $`,
       footer: "Actualizado recientemente",
       chart: graficoDiaDolares,
     },
